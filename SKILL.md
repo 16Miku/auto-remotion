@@ -11,7 +11,7 @@ description: |
   - 用户想用 Remotion 把长视频切成短片段做宣传片
 
   本技能覆盖从原始录屏素材到完整 Remotion 宣传片的完整流程：
-  目标确认 → 素材识别 → 分镜策划 → 结构化规格 → Remotion 实现
+  环境准备 → 目标确认 → 素材识别 → 分镜策划 → 结构化规格 → Remotion 实现
   → 字幕轨 → 中文配音（edge-tts）→ BGM → 渲染出片
 
   每个阶段都有具体检查清单、常见问题和决策框架。
@@ -52,6 +52,64 @@ description: |
 **典型对话节奏**：
 - 用户：录屏 20 分钟 → 宣传片 60 秒
 - 执行顺序：先看素材定结构，再动手写代码
+
+---
+
+## 阶段零：环境准备
+
+### 0.1 创建 Remotion 项目
+
+```bash
+npx create-video@latest
+```
+
+推荐配置：
+- 模板：Blank（空白模板）
+- 使用 TailwindCSS：Yes
+- 安装 Skills：Yes（如果需要 remotion-video-toolkit skill）
+
+### 0.2 安装依赖
+
+```bash
+cd your-project-name
+npm install
+```
+
+### 0.3 启动开发服务器
+
+```bash
+npm run dev
+```
+
+同时在另一个终端启动 Claude Code：
+
+```bash
+cd your-project-name
+claude
+```
+
+### 0.4 安装 remotion-video-toolkit skill（可选）
+
+如果需要 remotion-video-toolkit skill 辅助：
+
+```bash
+npx skills add remotion-dev/skills
+```
+
+安装时选择：
+- Agent 类型：Claude Code 或当前使用的 Agent
+- 安装范围：全局安装（global）
+
+**注意**：如果安装目录导致 Claude Code 无法读取 skill，需要用 `cc switch` 重新导入。
+
+### 0.5 环境检查清单
+
+| 检查项 | 命令 | 预期结果 |
+|--------|------|---------|
+| Node.js | `node --version` | ≥ 18 |
+| npm | `npm --version` | ≥ 9 |
+| Remotion CLI | `npx remotion --version` | 显示版本号 |
+| 开发服务器 | `npm run dev` | localhost:3000 可访问 |
 
 ---
 
