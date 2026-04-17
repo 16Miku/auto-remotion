@@ -146,7 +146,7 @@ npx clawhub@latest install remotion-video-toolkit --force
 - 动画、时序、渲染（CLI/Node.js/Lambda/Cloud Run）
 - 字幕、3D、图表、文字特效、转场、媒体处理
 
-**注意**：`npx skills add remotion-dev/skills` 是安装**本 skill（auto-remotion）**的方式，与 remotion-video-toolkit 是完全不同的 skill。
+**注意**：`npx skills add remotion-dev/skills` 是安装 **remotion-best-practices** skill 的方式，与 remotion-video-toolkit 是完全不同的 skill。
 
 **注意**：如果安装目录导致 Claude Code 无法读取 skill，需要用 `cc switch` 重新导入。
 
