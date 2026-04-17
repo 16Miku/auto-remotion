@@ -15,6 +15,10 @@ description: |
   → 字幕轨 → 中文配音（edge-tts）→ BGM → 渲染出片
 
   每个阶段都有具体检查清单、常见问题和决策框架。
+
+  **本 skill 不适用的情况**（见"不适用场景"章节）：
+  - 从技术文档/幻灯片生成视频（无源视频素材）
+  - 需要 AI 生成视频画面本身（仅处理已有素材的剪辑组合）
 ---
 
 ## 核心理念
@@ -31,6 +35,23 @@ description: |
 4. 最后才叠加字幕、配音、BGM、包装
 
 违反这个顺序，会导致大量返工。
+
+---
+
+## 快速启动（3 分钟理解全局）
+
+如果用户只需要了解全貌，按这个顺序介绍：
+
+```
+1. 输入：20 分钟录屏（.mp4）
+2. 核心工作：切片 + 重组 + 叠加
+3. 工具链：Remotion（代码驱动视频） + edge-tts（中文配音） + ffmpeg（音频处理）
+4. 输出：60 秒官网宣传片（.mp4）
+```
+
+**典型对话节奏**：
+- 用户：录屏 20 分钟 → 宣传片 60 秒
+- 执行顺序：先看素材定结构，再动手写代码
 
 ---
 
@@ -132,8 +153,8 @@ description: |
 remotion-app/
 ├── public/              ← 所有源素材放这里（视频、音频、图片）
 │   ├── source.mp4      ← 源视频
-│   ├── voiceover.mp3    ← 配音
-│   └── bgm.mp3          ← BGM
+│   ├── voiceover.mp3   ← 配音
+│   └── bgm.mp3         ← BGM
 ├── src/
 │   ├── Composition.tsx  ← 主 composition（含所有 Segment 组件）
 │   └── Root.tsx        ← composition 注册
@@ -279,15 +300,81 @@ ffmpeg -f lavfi -i anullsrc=r=24000:cl=mono -t 2.5 -q:a 9 silence.mp3
 ffmpeg -f concat -safe 0 -i concat_list.txt -acodec libmp3lame output.mp3
 ```
 
-### 6.3 中文语音选项
+### 6.3 配音生成脚本示例
+
+实际项目中使用的 Python 脚本结构（`generate_voiceover_v2.py`）：
+
+```python
+import asyncio
+import edge_tts
+import subprocess
+import json
+import os
+
+FFMPEG = "A:/study/AI/LLM/browser-use-cli-test/remotion-app/node_modules/@remux/compositor-win32-x64-msvc/ffmpeg.exe"
+
+async def generate_segment(seg: dict, output_dir: str):
+    """生成单段配音 + 静音填充"""
+    target_sec = seg["targetSec"]
+    output_path = os.path.join(output_dir, f"vo_{seg['id']}.mp3")
+
+    # 1. 生成配音
+    communicate = edge_tts.Communicate(seg["text"], "zh-CN-XiaoxiaoNeural")
+    seg_path = os.path.join(output_dir, f"seg_{seg['id']}.mp3")
+    await communicate.save(seg_path)
+
+    # 2. 测量实际时长
+    probe = subprocess.run([
+        FFMPEG, "-i", seg_path, "-hide_banner"
+    ], capture_output=True, text=True)
+    # 解析输出获取时长，或使用 ffprobe 精确测量
+    actual_dur = measure_duration(seg_path)  # 自定义函数
+
+    # 3. 计算静音填充
+    silence_sec = target_sec - actual_dur
+    if silence_sec > 0.05:
+        silence_path = os.path.join(output_dir, f"silence_{seg['id']}.mp3")
+        subprocess.run([
+            FFMPEG, "-f", "lavfi",
+            "-i", f"anullsrc=r=24000:cl=mono",
+            "-t", str(silence_sec),
+            "-q:a", "9",
+            silence_path
+        ])
+        # 4. 合并配音 + 静音
+        concat_file = os.path.join(output_dir, f"concat_{seg['id']}.txt")
+        with open(concat_file, "w") as f:
+            f.write(f"file '{seg_path}'\n")
+            f.write(f"file '{silence_path}'\n")
+        subprocess.run([
+            FFMPEG, "-f", "concat", "-safe", "0",
+            "-i", concat_file, "-acodec", "libmp3lame", output_path
+        ])
+    else:
+        os.rename(seg_path, output_path)
+
+async def main():
+    with open("voiceover-script.json") as f:
+        segments = json.load(f)
+    for seg in segments:
+        await generate_segment(seg, "output_dir")
+    # 最后用 ffmpeg concat 合并所有段
+    subprocess.run([FFMPEG, "-f", "concat", "-safe", "0",
+                    "-i", "final_concat.txt", "-acodec", "libmp3lame",
+                    "remotion-app/public/voiceover.mp3"])
+
+asyncio.run(main())
+```
+
+### 6.4 中文语音选项
 
 | Voice | 特点 | 适用场景 |
 |-------|---|---|
 | `zh-CN-XiaoxiaoNeural` | 专业女声，清晰流畅 | 产品介绍（本次选用） |
 | `zh-CN-YunxiNeural` | 年轻男声，有点活泼 | 科技产品演示 |
-| `zh-CN-YunjianNeural` | 阳刚男声 | 强技术感、专业工具 |
+| `zh-CN-YunjianNeural` | 阳刚男声 | 强技术感，专业工具 |
 
-### 6.4 配音与时间线匹配策略
+### 6.5 配音与时间线匹配策略
 
 微调顺序：
 1. 先调文字内容长度
@@ -373,6 +460,38 @@ Remotion 渲染需要：
 
 ---
 
+## 不适用场景（重要）
+
+本 skill **不适用**于以下场景，识别到时请明确告知用户：
+
+| 场景 | 原因 | 建议 |
+|-----|------|------|
+| **技术文档/幻灯片 → 视频** | 本 skill 需要已有录屏视频作为输入，没有源视频无法切片 | 先用 Screen Studio/OBS/Keynote 录制幻灯片演示，再走本工作流 |
+| **AI 生成视频画面** | 本 skill 仅处理已有素材的剪辑组合，不生成新画面 | 需要 Text-to-Video / AI 视频生成工具（如 Sora、Pika） |
+| **从零构建动画视频** | 本 skill 假设有现成素材，只是剪辑重组 | 需要纯动画/图形动画工具（如 After Effects、Canva） |
+
+**回归路径**：如果用户有技术文档但没有录屏 → 引导用户先录制幻灯片演示（Screen Studio/OBS）→ 再回到本工作流。
+
+---
+
+## 决策树
+
+用户描述任务时，按以下顺序判断：
+
+```
+用户描述任务
+    │
+    ├─ 有录屏/产品演示视频（.mp4）？
+    │       ├─ 是 → 走完整工作流（本 skill）
+    │       └─ 否 → 跳转到"不适用场景"处理
+    │
+    └─ 目标是官网宣传片/产品介绍？
+            ├─ 是 → 本 skill 适用
+            └─ 否 → 说明本 skill 专注场景，建议其他方案
+```
+
+---
+
 ## 项目结构总览
 
 ```
@@ -407,3 +526,7 @@ project/
 | 配音和字幕错位 | 配音总时长 ≠ 视频时长 | 每段后加静音填充对齐 |
 | 渲染报 ENOSPC | C 盘空间不足 | 清理 %TEMP%，确保 5-10GB 可用 |
 | 渲染时 FreezeFrame 报错 | `#t=` 或 `playbackRate=0` 不支持 | 改用纯色背景 |
+| 渲染报错 "frame range 0-N is not inbetween..." | 帧范围写错（应为左闭右开） | 改为 `--frames=0-{N-1}` |
+| 某 Segment 时长不够 | 素材本身内容少 + 加速已到极限 | Option B：接受更长；或压缩其他 Segment |
+| BGM 盖过人声 | BGM 音量过大 | 降低 BGM 音量至 0.15-0.25，配音段更低 |
+| edge-tts 生成失败 | 网络或认证问题 | 检查 `edge-tts --list-voices` 是否正常 |
