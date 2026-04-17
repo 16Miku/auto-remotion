@@ -148,9 +148,7 @@ npx clawhub@latest install remotion-video-toolkit --force
 
 **注意**：`npx skills add remotion-dev/skills` 是安装 **remotion-best-practices** skill 的方式，与 remotion-video-toolkit 是完全不同的 skill。
 
-**方式三：从本地路径安装（安装本 auto-remotion skill）**
-
-如果你想安装本 skill（auto-remotion）到本地：
+**方式三：从本地路径安装（安装 **remotion-best-practices**）**
 
 ```bash
 npx skills add remotion-dev/skills
@@ -160,7 +158,7 @@ npx skills add remotion-dev/skills
 - Agent 类型：Claude Code 或当前使用的 Agent
 - 安装范围：全局安装（global）
 
-**注意**：如果安装目录导致 Claude Code 无法读取 skill，需要用 `cc switch` 重新导入。
+**注意**：`npx skills add remotion-dev/skills` 安装的是 **remotion-best-practices**，与 auto-remotion 和 remotion-video-toolkit 都是完全不同的 skill。
 
 ### 0.6 环境检查清单
 
