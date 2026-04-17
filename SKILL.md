@@ -111,11 +111,32 @@ cd my-video
 claude
 ```
 
-### 0.4 安装 remotion-video-toolkit skill（可选）
+### 0.4 安装 ClawHub CLI（可选）
 
-如果需要 remotion-video-toolkit skill 辅助开发，有两种安装方式：
+如需发布技能或管理注册表认证，可安装独立 clawhub CLI：
 
-**方式一：从 ClawHub 安装（推荐）**
+```bash
+npm i -g clawhub
+# 或
+pnpm add -g clawhub
+```
+
+### 0.5 安装 remotion-video-toolkit skill（可选）
+
+**本 skill（auto-remotion）与 remotion-video-toolkit 是不同的 skill：**
+
+- **auto-remotion**：本 skill，专注"从录屏到宣传片"的完整剪辑工作流，覆盖需求确认→素材识别→Remotion 实现→配音字幕→BGM→渲染出片
+- **remotion-video-toolkit**：ClawHub 上的另一个 skill，29 条规则，专注 Remotion API 使用、动画特效、渲染管道等技术细节
+
+两者可互补使用。如果需要 remotion-video-toolkit 辅助开发：
+
+**方式一：使用 openclaw 原生命令（推荐）**
+
+```bash
+openclaw skills install remotion-video-toolkit
+```
+
+**方式二：使用 clawhub CLI**
 
 ```bash
 npx clawhub@latest install remotion-video-toolkit --force
@@ -125,7 +146,7 @@ npx clawhub@latest install remotion-video-toolkit --force
 - 动画、时序、渲染（CLI/Node.js/Lambda/Cloud Run）
 - 字幕、3D、图表、文字特效、转场、媒体处理
 
-**方式二：从本地路径安装**
+**方式三：从本地路径安装**
 
 ```bash
 npx skills add remotion-dev/skills
@@ -137,7 +158,7 @@ npx skills add remotion-dev/skills
 
 **注意**：如果安装目录导致 Claude Code 无法读取 skill，需要用 `cc switch` 重新导入。
 
-### 0.5 环境检查清单
+### 0.6 环境检查清单
 
 | 检查项 | 命令 | 预期结果 |
 |--------|------|---------|
