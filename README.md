@@ -80,7 +80,13 @@ auto-remotion-dev/
 |------|------|---------|
 | [video-use](https://github.com/browser-use/video-use) | browser-use | 两段式视频理解、自动分镜、Hard Rules |
 | [remotion-video-toolkit](https://clawhub.ai/shreefentsar/remotion-video-toolkit) | ClawHub | Remotion API 技巧 |
-| [remotion-best-practices](https://clawhub.ai/shreefentsar/remotion-best-practices) | ClawHub | Remotion 最佳实践 |
+| [remotion-best-practices](https://www.remotion.dev/docs/ai/skills) | Remotion 官方 | Remotion 最佳实践 |
+
+## 参考链接
+
+- [Remotion 官网](https://www.remotion.dev/)
+- [Remotion + Claude Code](https://www.remotion.dev/docs/ai/claude-code)
+- [Remotion Skills](https://www.remotion.dev/docs/ai/skills)
 
 ## License
 
