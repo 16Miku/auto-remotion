@@ -113,7 +113,19 @@ claude
 
 ### 0.4 安装 remotion-video-toolkit skill（可选）
 
-如果需要 remotion-video-toolkit skill 辅助：
+如果需要 remotion-video-toolkit skill 辅助开发，有两种安装方式：
+
+**方式一：从 ClawHub 安装（推荐）**
+
+```bash
+npx clawhub@latest install remotion-video-toolkit --force
+```
+
+该 skill 包含 29 条规则，覆盖：
+- 动画、时序、渲染（CLI/Node.js/Lambda/Cloud Run）
+- 字幕、3D、图表、文字特效、转场、媒体处理
+
+**方式二：从本地路径安装**
 
 ```bash
 npx skills add remotion-dev/skills
