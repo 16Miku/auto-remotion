@@ -12,7 +12,7 @@ description: |
   - 用户想用 Remotion 把长视频切成短片段做宣传片
 
   本技能覆盖从原始录屏素材到完整 Remotion 宣传片的完整流程：
-  环境准备 → 目标确认 → 素材识别 → 分镜策划 → 结构化规格 → Remotion 实现
+  环境准备 → 目标确认 → 素材识别（人工/自动）→ 分镜策划 → 结构化规格 → Remotion 实现
   → 字幕轨 → 中文配音（edge-tts）→ BGM → 渲染出片
 
   每个阶段都有具体检查清单、常见问题和决策框架。
@@ -290,6 +290,123 @@ npx skills add remotion-dev/skills
 - 对话类片段要确保"输入→发送→回复出现"的因果链完整
 - 长任务演示不要只靠整体快进，要拆成"发起/执行/结果/成果展示"多个叙事节点
 - 真实切片时间点以**分**为单位记录（`4:16` 而不是 `4.267`）
+
+---
+
+## 阶段三补充：自动视频理解（可选）
+
+> 本章节借鉴 [video-use](https://github.com/browser-use/video-use) 项目。如需实现 Agent 自动化剪辑，建议启用本流程。
+
+### 3.1 核心思想：让 LLM 读视频，而不是看视频
+
+传统方式（纯人工）：
+```
+人工看视频 10-20min → 人工标记时间点 → 人工判断价值 → 人工规划分镜
+```
+
+自动化方式（基于转录）：
+```
+视频 → 转录文本（1-2min）→ LLM 阅读转录（10s）→ 自动识别有价值片段 → 自动生成分镜
+```
+
+**关键洞察**：用转录文本把视频"文本化"，LLM 擅长处理文本，就能自动化原本需要人工判断的决策。
+
+---
+
+### 3.2 两段式视频理解架构
+
+| 层 | 方式 | 代价 |
+|----|------|------|
+| **音频转录层** | ElevenLabs Scribe 词级时间戳 | ~12KB/小时视频 |
+| **视觉合成层** | 按需生成 filmstrip + waveform PNG | 仅在决策点生成 |
+
+LLM 从不直接处理视频帧，而是读取"文本化的视频信息"。这样把 ~45M tokens（逐帧 dump）压缩到 ~12KB + 少量 PNG。
+
+---
+
+### 3.3 转录管道
+
+**依赖安装**：
+
+```bash
+pip install -e video-use/helpers
+# 或独立安装
+pip install requests librosa matplotlib pillow numpy
+```
+
+**核心脚本**：
+
+| 脚本 | 功能 |
+|------|------|
+| `transcribe.py` | ElevenLabs Scribe 转录，输出词级时间戳 JSON |
+| `pack_transcripts.py` | 把 JSON 打包成 `takes_packed.md`（phrase 级） |
+| `timeline_view.py` | 按需生成 filmstrip + waveform PNG |
+
+**转录命令**：
+
+```bash
+# 单文件
+python helpers/transcribe.py <video_path>
+
+# 批量（4 并行）
+python helpers/transcribe_batch.py <videos_dir>
+
+# 打包成 takes_packed.md
+python helpers/pack_transcripts.py --edit-dir <edit_dir>
+```
+
+---
+
+### 3.4 takes_packed.md 格式
+
+这是 LLM 阅读视频内容的主要 artifact。格式示例：
+
+```markdown
+# Packed transcripts
+
+## C0103  (duration: 43.0s, 8 phrases)
+  [002.52-005.36] S0 Ninety percent of what a web agent does is completely wasted.
+  [006.08-006.74] S0 We fixed this.
+```
+
+**生成规则**：
+- 按静音 ≥ 0.5s 或说话人切换切分 phrase
+- 每个 phrase 带有 `[start-end]` 时间戳
+- 包含音频事件标记：`(laughs)`、`(sighs)`、`(applause)`
+
+---
+
+### 3.5 LLM 自动分镜
+
+给定 `takes_packed.md`，LLM 可直接生成分镜：
+
+```json
+[
+  {"source": "C0103", "start": 2.42, "end": 6.85,
+   "beat": "HOOK", "quote": "Ninety percent...", "reason": "Cleanest delivery"},
+  {"source": "C0103", "start": 14.30, "end": 28.90,
+   "beat": "SOLUTION", "quote": "We fixed this", "reason": "Only take without false start"}
+]
+```
+
+**Editor sub-agent prompt 要点**：
+- 输入：takes_packed.md + 用户上下文 + 目标时长
+- 输出：JSON 数组，带 source/start/end/beat/quote/reason
+- 规则：切点必须在词边界、30-200ms pad、优先 ≥400ms 静音
+
+---
+
+### 3.6 timeline_view：按需可视化
+
+在 LLM 判断模糊时，生成可视化确认：
+
+```bash
+python helpers/timeline_view.py <video> <start> <end> -o out.png
+```
+
+输出：filmstrip + waveform + word labels PNG
+
+**使用原则**：只在决策点使用，不是全程扫描工具。
 
 ---
 
@@ -619,6 +736,25 @@ Remotion 渲染需要：
 
 ## 关键设计决策框架
 
+### Hard Rules（生产正确性铁律）
+
+> 以下规则来自 [video-use](https://github.com/browser-use/video-use) 项目的生产验证。违反这些规则会导致静默失败或输出损坏，务必遵守。
+
+| # | 规则 | 说明 |
+|---|------|------|
+| 1 | **字幕 LAST** | 字幕必须在滤镜链最后应用，否则叠加层会遮住字幕 |
+| 2 | **分段提取 → 无损 concat** | 有叠加时用 `-c copy` concat，避免双重编码 |
+| 3 | **30ms 音频淡入淡出** | 每个分段边界加 `afade=t=in:st=0:d=0.03,afade=t=out:st={dur-0.03}:d=0.03`，否则有 pop 音 |
+| 4 | **叠加层 PTS 偏移** | 用 `setpts=PTS-STARTPTS+T/TB` 偏移叠加层帧 0，否则动画窗口显示错误帧 |
+| 5 | **Master SRT 用输出时间线偏移** | `output_time = word.start - segment_start + segment_offset`，否则 concat 后字幕错位 |
+| 6 | **不在词中间切割** | 所有切边必须对齐到转录词的边界 |
+| 7 | **切割边缘留 pad** | 工作窗口 30-200ms，Scribe 时间戳漂移 50-100ms，pad 吸收漂移 |
+| 8 | **词级 verbatim ASR** | 不用 SRT/phrase 模式（丢失亚秒级间隙数据） |
+| 9 | **按源缓存转录** | 不重新转录，除非源文件本身变了 |
+| 10 | **多动画并行子代理** | 用 `Agent` 工具并行生成，总耗时 ≈ 最慢那个 |
+| 11 | **执行前确认策略** | 在用户确认计划前不进行任何切割 |
+| 12 | **输出到 `<videos_dir>/edit/`** | 不在 skill 目录写任何输出 |
+
 ### Option A vs Option B 决策
 
 当某个 Segment 时长问题无法通过调速解决时：
@@ -680,7 +816,12 @@ project/
 │       ├── subtitle-track.json      ← 字幕时间轴
 │       ├── voiceover-script.json   ← 配音脚本
 │       ├── generate_voiceover.py  ← 配音生成脚本
-│       └── process_bgm.py         ← BGM 混合脚本
+│       ├── process_bgm.py         ← BGM 混合脚本
+│       ├── takes_packed.md         ← 自动视频理解：打包转录文本
+│       ├── transcripts/             ← 自动视频理解：原始转录 JSON
+│       │   └── <video_stem>.json
+│       ├── timeline_view/          ← 自动视频理解：可视化确认 PNG
+│       └── animations/            ← 动画叠加层（如有）
 └── remotion-app/                  ← Remotion 实现层
     ├── public/
     │   ├── source.mp4            ← 源视频（单视频场景）
