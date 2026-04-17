@@ -1,0 +1,5 @@
+# ClawHub installation artifacts
+.clawhub/
+
+# Installed skills (from ClawHub or local npx skills add)
+skills/
