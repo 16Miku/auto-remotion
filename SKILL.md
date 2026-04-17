@@ -41,13 +41,16 @@ description: |
 
 ## 快速启动（3 分钟理解全局）
 
-如果用户只需要了解全貌，按这个顺序介绍：
+**对于 AI Agent / 自动化脚本，使用非交互式创建**：
 
+```bash
+npx create-video --yes --blank --no-tailwind my-video
 ```
-1. 输入：20 分钟录屏（.mp4）
-2. 核心工作：切片 + 重组 + 叠加
-3. 工具链：Remotion（代码驱动视频） + edge-tts（中文配音） + ffmpeg（音频处理）
-4. 输出：60 秒官网宣传片（.mp4）
+
+**对于手动操作**：
+```bash
+npx create-video@latest
+# 交互式选择 Blank 模板
 ```
 
 **典型对话节奏**：
@@ -60,19 +63,38 @@ description: |
 
 ### 0.1 创建 Remotion 项目
 
+**交互式创建**（手动操作时）：
 ```bash
 npx create-video@latest
+# 选择模板：Blank（空白模板）
 ```
 
-推荐配置：
-- 模板：Blank（空白模板）
-- 使用 TailwindCSS：Yes
-- 安装 Skills：Yes（如果需要 remotion-video-toolkit skill）
+**非交互式创建**（AI Agent / 脚本时）：
+```bash
+npx create-video --yes --blank --no-tailwind my-video
+```
+
+可用模板 flags：
+| Flag | 模板 |
+|------|------|
+| `--blank` | 空白画布（推荐） |
+| `--hello-world` | Hello World 动画 |
+| `--javascript` | 纯 JavaScript 版 |
+| `--recorder` | 录屏工具 |
+| `--still` | 静态图片模板 |
+| `--overlay` | 视频叠加层 |
+| `--audiogram` | 音频可视化 |
+| `--prompt-to-video` | AI 文字生视频 |
+
+**重要 flags**：
+- `--yes` / `-y`：跳过所有交互提示（AI Agent 必须）
+- `--no-tailwind`：不安装 TailwindCSS
+- `--tmp`：在临时目录创建
 
 ### 0.2 安装依赖
 
 ```bash
-cd your-project-name
+cd my-video
 npm install
 ```
 
@@ -85,7 +107,7 @@ npm run dev
 同时在另一个终端启动 Claude Code：
 
 ```bash
-cd your-project-name
+cd my-video
 claude
 ```
 
