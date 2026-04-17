@@ -72,11 +72,15 @@ auto-remotion-dev/
 └── .gitignore
 ```
 
-## 衍生项目
+## 参考项目
 
-- **browser-use/video-use** - AI 原生视频剪辑 skill（https://github.com/browser-use/video-use）
-- **remotion-video-toolkit** - Remotion API 技巧集（https://clawhub.ai/shreefentsar/remotion-video-toolkit）
-- **remotion-best-practices** - Remotion 最佳实践（本地安装）
+本 skill 借鉴吸收了以下开源项目：
+
+| 项目 | 来源 | 借鉴内容 |
+|------|------|---------|
+| [video-use](https://github.com/browser-use/video-use) | browser-use | 两段式视频理解、自动分镜、Hard Rules |
+| [remotion-video-toolkit](https://clawhub.ai/shreefentsar/remotion-video-toolkit) | ClawHub | Remotion API 技巧 |
+| [remotion-best-practices](https://clawhub.ai/shreefentsar/remotion-best-practices) | ClawHub | Remotion 最佳实践 |
 
 ## License
 
