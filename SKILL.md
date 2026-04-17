@@ -8,6 +8,7 @@ description: |
   - "把演示视频做成官网介绍"
   - "Remotion 切片"、"视频分镜"
   - "产品宣传视频生成"、"screen recording to promo video"
+  - "多个视频合并成宣传片"、"产品视频剪辑"
   - 用户想用 Remotion 把长视频切成短片段做宣传片
 
   本技能覆盖从原始录屏素材到完整 Remotion 宣传片的完整流程：
@@ -165,6 +166,7 @@ npx skills add remotion-dev/skills
 
 帧级时间线，包含真实素材区间和速度：
 
+**单视频源**：
 ```json
 {
   "compositionId": "MyPromoV1",
@@ -177,6 +179,37 @@ npx skills add remotion-dev/skills
       "startFrame": 0,
       "durationFrames": 150,
       "clips": []
+    }
+  ]
+}
+```
+
+**多视频源**（`clips[]` 中指定 `src`）：
+```json
+{
+  "compositionId": "MyPromoV1",
+  "fps": 30,
+  "durationInFrames": 1800,
+  "sourceVideos": [
+    { "id": "video-a", "path": "./public/product-demo.mp4" },
+    { "id": "video-b", "path": "./public/user-review.mp4" }
+  ],
+  "segments": [
+    {
+      "segmentId": "SegmentIntro",
+      "startFrame": 0,
+      "durationFrames": 150,
+      "clips": [
+        { "src": "video-a", "start": 10.5, "end": 15.2, "playbackRate": 1 }
+      ]
+    },
+    {
+      "segmentId": "SegmentFeature",
+      "startFrame": 150,
+      "durationFrames": 300,
+      "clips": [
+        { "src": "video-b", "start": 0, "end": 8.5, "playbackRate": 1 }
+      ]
     }
   ]
 }
@@ -210,7 +243,9 @@ npx skills add remotion-dev/skills
 ```
 remotion-app/
 ├── public/              ← 所有源素材放这里（视频、音频、图片）
-│   ├── source.mp4      ← 源视频
+│   ├── source.mp4      ← 源视频（单视频场景）
+│   ├── video-a.mp4     ← 多视频场景：来源视频 A
+│   ├── video-b.mp4     ← 多视频场景：来源视频 B
 │   ├── voiceover.mp3   ← 配音
 │   └── bgm.mp3         ← BGM
 ├── src/
@@ -222,6 +257,8 @@ remotion-app/
 **所有源素材必须放 `public/`，用 `staticFile("文件名")` 引用。**
 
 ### 4.2 视频切片工具函数
+
+**单视频源**（默认）：
 
 ```tsx
 type ClipSpec = {
@@ -247,6 +284,30 @@ const clip = (
   trimBefore={trimBeforeFrames}
   trimAfter={trimAfterFrames}
   playbackRate={playbackRate}
+  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+/>
+```
+
+**多视频源**：传入视频文件标识符：
+
+```tsx
+type ClipSpec = {
+  trimBeforeFrames: number;
+  trimAfterFrames: number;
+  playbackRate: number;
+  src?: string;  // ← 可选：指定来源视频（默认为主视频）
+};
+
+// 不同 Segment 使用不同来源视频
+const clipA = clip(10, 15, 1);           // 来自 source-a.mp4
+const clipB = clip(5, 12, 1, "source-b.mp4"); // 来自 source-b.mp4
+
+<Video
+  src={staticFile(clipA.src || "source-a.mp4")}
+  muted
+  trimBefore={clipA.trimBeforeFrames}
+  trimAfter={clipA.trimAfterFrames}
+  playbackRate={clipA.playbackRate}
   style={{ width: "100%", height: "100%", objectFit: "cover" }}
 />
 ```
@@ -558,14 +619,16 @@ project/
 │   └── projects/{project-id}/
 │       ├── edit-script.md          ← 剪辑执行稿
 │       ├── storyboard.json         ← 分镜表
-│       ├── edit-spec.json         ← 编辑规格（帧级时间线）
+│       ├── edit-spec.json         ← 编辑规格（帧级时间线，支持多视频源）
 │       ├── subtitle-track.json      ← 字幕时间轴
 │       ├── voiceover-script.json   ← 配音脚本
 │       ├── generate_voiceover.py  ← 配音生成脚本
 │       └── process_bgm.py         ← BGM 混合脚本
 └── remotion-app/                  ← Remotion 实现层
     ├── public/
-    │   ├── source.mp4            ← 源视频
+    │   ├── source.mp4            ← 源视频（单视频场景）
+    │   ├── video-a.mp4            ← 多视频场景：来源视频 A
+    │   ├── video-b.mp4            ← 多视频场景：来源视频 B
     │   ├── voiceover.mp3         ← 配音
     │   └── bgm.mp3               ← BGM
     └── src/
