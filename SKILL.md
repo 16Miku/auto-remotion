@@ -22,6 +22,13 @@ description: |
   - 需要 AI 生成视频画面本身（仅处理已有素材的剪辑组合）
 ---
 
+## 云端链接
+
+- **GitHub**: https://github.com/16Miku/auto-remotion
+- **ClawHub**: https://clawhub.ai/16miku/auto-remotion
+
+---
+
 ## 核心理念
 
 这条工作流的核心不是"让 AI 替代人工"，而是：
